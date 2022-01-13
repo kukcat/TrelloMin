@@ -7,7 +7,7 @@ let resetBtn = document.querySelector(".reset_btn");
 
 let boardArr = []
 let boardItemArr = []
-let colorArr = ['#ff0000', '#00ff00', '#0000ff']
+let colorArr = ['#ff0000', '#00ff00', '#0000ff', '#cccccc']
 let BoardId = 0;
 let itemId = 0;
 
@@ -43,7 +43,7 @@ let createBoard = (id,name,color) =>{
 let createBoardItem = (boardId) =>{
 
     let itemInfo = document.forms.createBoardItem.elements;
-
+    console.log(itemInfo.tag[0].checked)
     const boardItem = {
         'boardId':  boardId,
         'position': boardArr[boardId].cardCounter,
@@ -97,7 +97,8 @@ let addBoardItemModal = (boardId) =>{
     let modalWindow = document.createElement('div');
     modalWindow.classList.add('modal_window');
     document.querySelector('body').append(modalWindow);
-    modalWindow.innerHTML = `
+    let modalValue =
+     `
     <form name="createBoardItem">
     <div class="window">
     <p class="modal_title">Добавление карточки в "${boardArr[boardId].name}" доску</p>
@@ -108,60 +109,31 @@ let addBoardItemModal = (boardId) =>{
     <input type="text" name="" id="text">
 
     <label for="">Тег: </label>
-    <div class="tag_wrapper">
-        <div class="tag_item">
-            <label class="tag_label" for="tag1"></label>
-            <input type="checkbox" name="tag" id="tag1" class="tag_input">
-        </div>
-        <div class="tag_item">
-            <label class="tag_label"></label>
-            <input type="checkbox" name="tag" id="tag2" class="tag_input">
-        </div>
-        <div class="tag_item">
-            <label class="tag_label"></label>
-            <input type="checkbox" name="tag" id="tag3" class="tag_input">
-        </div>
-        <div class="tag_item">
-            <label class="tag_label"></label>
-            <input type="checkbox" name="tag" id="tag4" class="tag_input">
-        </div>
-        <div class="tag_item">
-            <label class="tag_label"></label>
-            <input type="checkbox" name="tag" id="tag5" class="tag_input">
-        </div>
-        <div class="tag_item">
-            <label class="tag_label"></label>
-            <input type="checkbox" name="tag" id="tag6" class="tag_input">
-        </div>
-        <div class="tag_item">
-            <label class="tag_label"></label>
-            <input type="checkbox" name="tag" id="tag7" class="tag_input">
-        </div>
-        <div class="tag_item">
-            <label class="tag_label"></label>
-            <input type="checkbox" name="tag" id="tag8" class="tag_input">
-        </div>
-        <div class="tag_item">
-            <label class="tag_label"></label>
-            <input type="checkbox" name="tag" id="tag9" class="tag_input">
-        </div>
-        <div class="tag_item">
-            <label class="tag_label"></label>
-            <input type="checkbox" name="tag" id="tag10" class="tag_input">
-        </div> 
-    </div>
+    <div class="tag_wrapper">`
 
-    <label for="">Дата окончания</label>
-    <input type="date" id="expiredDate" name="trip-start"
-    value="">
-    <div class="btn_item_wrapper">
-        <div class="add_item_btn">Добавить карточку</div>
-        <div class="cancel_item_btn">Выйти</div>
-    </div>
-</div>
-</form>
-    `
+    for (let i = 0; i < colorArr.length; i++) {
+        modalValue += `
+            <div class="tag_item">
+                <label class="tag_label" for="tag${i}" style="background-color: ${colorArr[i]};"></label>
+                <input type="checkbox" name="tag" id="tag${i}" class="tag_input" value="${colorArr[i]}">
+            </div>
+        `
+    }
+
     
+    modalValue += `
+            </div>
+            <label for="">Дата окончания</label>
+            <input type="date" id="expiredDate" name="trip-start"
+            value="2022-01-10">
+            <div class="btn_item_wrapper">
+                <div class="add_item_btn">Добавить карточку</div>
+                <div class="cancel_item_btn">Выйти</div>
+            </div>
+        </div>
+        </form>`
+    
+    modalWindow.innerHTML = modalValue;
     console.log()
     modalWindow.childNodes[1].childNodes[1].childNodes[19].childNodes[1].addEventListener('click', () => createBoardItem(boardId));
 
