@@ -43,7 +43,15 @@ let createBoard = (id,name,color) =>{
 let createBoardItem = (boardId) =>{
 
     let itemInfo = document.forms.createBoardItem.elements;
-    console.log(itemInfo.tag[0].checked)
+    let itemTag = [];
+    for(let i = 0; i<colorArr.length; i++){
+        if(itemInfo.tag[i].checked){
+            itemTag.push(itemInfo.tag[i].value)
+        }
+    }
+
+    console.log(itemTag)
+
     const boardItem = {
         'boardId':  boardId,
         'position': boardArr[boardId].cardCounter,
@@ -51,10 +59,10 @@ let createBoardItem = (boardId) =>{
         'titile': itemInfo.title.value,
         'text': itemInfo.text.value,
         'expiredDate': itemInfo.expiredDate.value,
-        'tag': tag
+        'tag': itemTag
     }
 
-   // addBoardItem(boardItem);
+    addBoardItem(boardItem);
     boardItemArr.push(boardItem);
     addToLocalStorage();
     boardArr[boardId].cardCounter++
@@ -218,6 +226,13 @@ let exitModal = () =>{
 }
 
 let addBoardItem = (element) =>{
+
+    let boardItem = document.createElement('div');
+    boardItem.classList.add('card_body_item');
+    boardItem.setAttribute('item-index-number', element.itemId)
+
+    let allboard = document.querySelectorAll('.card');
+    console.log(allboard)
 }
 
 let reset = () =>{
