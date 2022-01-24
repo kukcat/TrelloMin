@@ -80,6 +80,13 @@ body{
 text-align: center;
 }
 
+#text{
+    resize: none;
+    width: 290px;
+    height: 200px;
+    margin-bottom: 10px;
+}
+
 .user_icon_wrapper{
     display: flex;
     justify-content: center;

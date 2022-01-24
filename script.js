@@ -103,16 +103,27 @@ let createBoardItem = (boardId) =>{  //создание карточки. У м�
         }
     });
     
-    for(let i = 0; i < userArr.length; i++){
-        if(itemInfo.user[i].checked) userId = itemInfo.user[i].value;
-    }
-
-    if(userId == undefined) {
-        addError('Выберите ответственного за задачу')
-        return
-    }
     
+    if(itemInfo.user.length == undefined){
 
+        if (itemInfo.user.checked) {
+            userId = itemInfo.user.value
+        }else{
+            addError('Выберите ответственного за задачу')
+            return
+        }
+
+    }else{
+
+        for(let i = 0; i < userArr.length; i++){
+            if(itemInfo.user[i].checked) userId = itemInfo.user[i].value;
+        }
+    
+        if(userId == undefined) {
+            addError('Выберите ответственного за задачу')
+            return
+        }
+    }
 
     const boardItem = {
         'boardId':  boardId,                        //привязка к борде
@@ -234,7 +245,7 @@ let addBoardItemModal = (boardId) =>{   //создание модалки для
     <input type="text" name="" id="title">
 
     <label for="">Описание задачи: </label>
-    <input type="text" name="" id="text">
+    <textarea name="" id="text"></textarea>
 
     <label for="">Тег: </label>
     <div class="tag_wrapper">`
@@ -818,7 +829,7 @@ let deleteUser = () => {
 
     for(let i = 0; i <allUser.length; i++){
         if(allUser[i].checked){
-            addLog(`Удален юзер ${userArr[i].userName}`)
+            addLog(`Удален пользователь ${userArr[i].name}`)
             userArr.splice(i,1);
             break
         }
@@ -867,7 +878,6 @@ let deleteBoard = (index) =>{ //удалить борду
         return    
     }
     addLog(`Удалена доска ${boardArr[index].name}`)
-    addToLocalStorage('board');
     allboard = document.querySelectorAll('.board');
     for(let board of allboard){
         if(board.getAttribute('board-index-number') == boardArr[index].id){
@@ -876,6 +886,7 @@ let deleteBoard = (index) =>{ //удалить борду
         }
     }
     boardArr.splice(index,1);
+    addToLocalStorage('board');
     exitModal();
 }
 
