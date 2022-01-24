@@ -742,12 +742,12 @@ let changeBoardItem = (index) =>{              //изменение карточ
 
 }
 
-let deleteBoardItem = (boardItemId) => {  //удаление карточки
-    let boardId = boardItemArr[boardItemId].boardId;
-    boardArr[boardId].cardCounter--        //удалили карточку - элементов в борде стало меньше
+let deleteBoardItem = (boardItemIndex) => {  //удаление карточки
+    let boardIndex = getBoardIndex(boardItemArr[boardItemIndex].boardId);
+    boardArr[boardIndex].cardCounter--        //удалили карточку - элементов в борде стало меньше
     
-    addLog(`Удалена доска ${boardItemArr[boardItemId]}`)
-    boardItemArr.splice(boardItemId,1);
+    addLog(`Удалена доска ${boardItemArr[boardItemIndex]}`)
+    boardItemArr.splice(boardItemIndex,1);
     addToLocalStorage('item');
     
     boardReCreate()
