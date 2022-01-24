@@ -84,6 +84,8 @@ text-align: center;
     display: flex;
     justify-content: center;
     align-items: center;
+    cursor: pointer;
+    width: 120px;
 }
 
 .user_icon_wrapper img{
@@ -448,3 +450,53 @@ margin-top: 8px;
     opacity: 0;
 }
 
+.user_input{
+    display: none;
+}
+
+.user_label:hover{
+    color: #cccccc;
+}
+
+.user_label{
+    width: 180px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-top: 15px;
+}
+
+.user_label > img{
+    margin: 8px;
+}
+
+.user_input:checked + .user_label > img{
+    border-radius: 50%;
+    border: 3px solid white;
+    margin: 5px;
+}
+
+.user_btn{
+    color: #fff;
+    cursor: pointer;
+    margin: 0 10px;
+    font-size: 20px;
+    padding: 10px;
+    border: 1px solid transparent;
+}
+
+.user_btn:hover{
+    border: 1px solid grey;
+    border-radius: 5px;
+}
+
+.user_wrapper{
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    padding: 20px;
+}
+
+.user_btn_wrapper{
+    display: flex;
+}

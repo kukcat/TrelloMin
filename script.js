@@ -5,17 +5,23 @@ let boardPlacement = document.querySelector(".board_wrapper")
 let placeForName = document.querySelector('#work_name') 
 let resetBtn = document.querySelector(".reset_btn");
 let settingsBtn = document.querySelector('.settings_btn')
-let filterBtn = document.querySelector('.filter_btn')
+let filterBtn = document.querySelector('.filter_btn');
+let userBtn = document.querySelector('.user_icon_wrapper')
+
+let USER_URL = 'https://randomuser.me/api/?results=1'
 
 let boardArr = []        // Массив с бордами 
 let boardItemArr = []    // Массив с карточками
 let colorArr = [];       // Массив с тегами 
 let logArr = [];         // Массив логов
 let filter = []          // Массив, в котором выбраны теги, в по которым идем фильтрация 
+let userArr = [];        // Массив юзеров
+let userId = 0;          // Последняя айдишка юзеров
 let currentColorId = 0;  // Последняя айдишка тегов                 
 let itemId = 0;          // Последняя айдишка карточке              все айдишки у меня уникальные и не обязаны соответствовать индексу массива. если я удалю элемент с какой-то айдишкой,
 let boardId = 0;         // Последняя айдишка борды                 то больше элемента с такой айдишкой не будет. Насколько я помню, такая система в бд, так что я решил why not
 let isfilter = false;    // Стоит ли сейчас фильтр
+let isError = false;     // Есть ли сейчас выведенная ошибка 
 let nameOfPlace = 'Название рабочей зоны';  //Название рабочей зоны
 let background;          // Картинка для фона (не работает при записи в локальное хранилище)
 let draggableCard;       // Карточка, которую я таскаю drag&drop'ом
@@ -25,6 +31,7 @@ filterBtn.addEventListener('click', () => addFilterItemModal())
 resetBtn.addEventListener('click', () => reset())
 addButton.addEventListener('click', () => addModalBoard())
 settingsBtn.addEventListener('click', () => addModalSettings())
+userBtn.addEventListener('click', () => addModalUser())
 
 //=============================== creating
 
@@ -119,6 +126,54 @@ let createBoardItem = (boardId) =>{  //создание карточки. У м�
     
 }
 
+let addNewTag = (newColor = document.querySelector('.input_board_color').value) => { //добавление нового тега
+    
+    const tag = {
+        'tagId': currentColorId,
+        'tagColor': newColor
+    }
+
+    for(let i = 0; i<colorArr.length; i++){
+        if (newColor == colorArr[i].tagColor) {
+            addError('Такой тег уже существует')
+            return 
+        }
+    }
+
+    if (colorArr.length >=10) {
+        addError('Нельзя создавать больше 10 тегов')
+        return
+    }
+
+    colorArr.push(tag)
+    currentColorId++;
+    exitModal();
+    addLog(`Добавлен тег: ${newColor}`)
+    addToLocalStorage('color')
+}
+
+async function addUser(){
+
+    let response = await fetch(USER_URL);
+    let userInfo = await response.json();
+
+    let userName = userInfo.results[0].name.first +` `+ userInfo.results[0].name.last
+
+    const user = {
+        'id': userId,
+        'gender': userInfo.results[0].gender,
+        'name': userName,
+        'icon': userInfo.results[0].picture.thumbnail
+    }
+
+    userArr.push(user);
+    userId++;
+
+    exitModal()
+    updateUserIcon()
+    addToLocalStorage('user');
+
+}
 
 
 //=============================== drawing               всё отображение тут  
@@ -128,7 +183,6 @@ let addBoard = (element) =>{ // добавление борды
     let board = document.createElement('li');                           //принцип везде одинаковый. Создаю какой-то элемент
     board.classList.add('board');                                       // Даю ему класс
     board.setAttribute('board-index-number', element.id);               //Даю атрибут, если нужно
-
     boardPlacement.append(board);
     board.style.backgroundColor = element.color + "B3";             //задаю цвет борды
     board.innerHTML=`
@@ -327,6 +381,44 @@ let addBoardItem = (element) =>{        //отображение карточк�
     addDragAndDropEventBoardItem(boardItem)
 }
 
+let addModalUser = () => {
+
+    let modalWindow = document.createElement('div');
+    modalWindow.classList.add('modal_window');
+    document.querySelector('body').append(modalWindow);
+    let modalValue = `
+        <div class="window">
+            <p class="modal_title">Пользователи доски</p>
+            <div class="user_wrapper">
+            `
+            
+    for(let i = 0; i<userArr.length; i++){
+        modalValue+=`
+            <input id="user${i}" type="radio" name="user" class="user_input">
+            <label class="user_label" for="user${i}"><img src="${userArr[i].icon}">
+                <div>${userArr[i].name}</div>
+            </label>
+        `
+    }
+
+    modalValue += `
+            </div>
+            <div class="user_btn">Удалить пользователя</div>
+            <div class="user_btn_wrapper">
+                <div class="user_btn">Создать пользователя</div>
+                <div class="user_btn">Выйти</div>
+            </div>
+
+        </div>
+    `
+    modalWindow.insertAdjacentHTML('afterbegin', modalValue);
+    
+    modalWindow.childNodes[1].childNodes[5].addEventListener('click', ()=>deleteUser())
+    modalWindow.childNodes[1].childNodes[7].childNodes[1].addEventListener('click', ()=>addUser())
+    modalWindow.childNodes[1].childNodes[7].childNodes[3].addEventListener('click', ()=>exitModal())
+
+}
+
 
 let addModalBoard = () =>{           // Модалка для заполнения данных для борды
     let modalWindow = document.createElement('div');
@@ -449,6 +541,22 @@ let addFilterItemModal = () =>{ //модалка фильтра
     
     modalWindow.childNodes[1].childNodes[1].childNodes[5].childNodes[1].addEventListener('click',() => FilterItem()) //отфильтровать элементы
     modalWindow.childNodes[1].childNodes[1].childNodes[5].childNodes[3].addEventListener('click', () => exitModal()); //закрыть модалку
+
+}
+
+let updateUserIcon = () =>{
+    let wrapper = document.querySelector('.user_icon_wrapper');
+    wrapper.innerHTML = '';
+    let users = '';
+    for(let i = 0; i<3; i++){
+        if (userArr[i]) {
+            users += `<li>
+            <img src="${userArr[i].icon}" class=""user_icon_item> 
+            </li>`
+        }
+    }
+
+    wrapper.insertAdjacentHTML('beforeend', users)
 
 }
 
@@ -600,31 +708,6 @@ let deleteTag = () =>{          //удаление тега
 
 }
 
-let addNewTag = (newColor = document.querySelector('.input_board_color').value) => { //добавление нового тега
-    
-    const tag = {
-        'tagId': currentColorId,
-        'tagColor': newColor
-    }
-
-    for(let i = 0; i<colorArr.length; i++){
-        if (newColor == colorArr[i].tagColor) {
-            addError('Такой тег уже существует')
-            return 
-        }
-    }
-
-    if (colorArr.length >=10) {
-        addError('Нельзя создавать больше 10 тегов')
-        return
-    }
-
-    colorArr.push(tag)
-    currentColorId++;
-    exitModal();
-    addLog(`Добавлен тег: ${newColor}`)
-    addToLocalStorage('color')
-}
 
 let changeBoardName = (element) =>{ //изменение названия борды
     
@@ -749,7 +832,7 @@ let addLog = (text) => { //добавление логов
 let addError = (error) =>{  //добавление описания ошибки для пользователя 
     let body = document.querySelector('body')
     let errorElement;
-    if (!document.querySelector('.error')) { //если блока с ошибкой еще нет, то создаем его 
+    if (!isError) { //если блока с ошибкой еще нет, то создаем его 
         errorElement = document.createElement('div')
         errorElement.classList.add('error')
     }else{
@@ -758,12 +841,14 @@ let addError = (error) =>{  //добавление описания ошибки
     errorElement.innerHTML = error
     body.append(errorElement)
     setTimeout(removeError, 3000) //через 3 секунды описание ошибки исчезает
+    isError = true;
 }
 
 let removeError = () => {
     if (document.querySelector('.error') != null) {
         document.querySelector('.error').remove()
     }
+    isError = false;
 }
 
 let addToLocalStorage = (type) =>{  //добавление в локальное хранилище
@@ -783,6 +868,9 @@ let addToLocalStorage = (type) =>{  //добавление в локальное
             localStorage.setItem('logArr', JSON.stringify(logArr))
         case 'name':
             localStorage.setItem('name', JSON.stringify(nameOfPlace))
+        case 'user':
+            localStorage.setItem('userArr', JSON.stringify(userArr))
+            localStorage.setItem('userId', JSON.stringify(userId))
         default:
 
             break;
@@ -805,7 +893,21 @@ let addDragAndDropEventBoardItem = (card) =>{ //ивенты для карточ
 
 
 function dragOverHeader(){ //Когда наша карточка над шапкой борды
+    
+    let newBoardId = this.closest(".board").getAttribute('board-index-number');
+    let oldBoardId = draggableCard.closest('.board').getAttribute('board-index-number')
+  
+    if (boardArr[getBoardIndex(newBoardId)].cardCounter >= 10 && newBoardId != oldBoardId) {    //если в новой карточек больше 10 задач, то выходим из функции
+        addError('В одной доске должно быть не более 10 карточек')
+        return
+    }else{
+        removeError()                                       //если была ошибка - удаляем
+    }
+
+
     this.nextSibling.nextSibling.childNodes[1].insertAdjacentElement('afterbegin', draggableCard)  //Добавляем элемент в нужный нам див, относительно this 
+
+
 }
 
 function dragOverCard(evt){    //Когда наша карточка над какой-то другой карточкой    
@@ -813,11 +915,22 @@ function dragOverCard(evt){    //Когда наша карточка над к�
     let cursorY = evt.pageY - this.getBoundingClientRect().top //Положение курсора внутри карточки, над которой водим 
     let cardHeight = this.offsetHeight; //Высота карточки, над которой водим
     
+    let newBoardId = this.closest(".board").getAttribute('board-index-number');
+    let oldBoardId = draggableCard.closest('.board').getAttribute('board-index-number')
+
+    if (boardArr[getBoardIndex(newBoardId)].cardCounter >= 10 && newBoardId != oldBoardId) {    
+        addError('В одной доске должно быть не более 10 карточек')
+        return
+    }else{
+        removeError()
+    }
+
     if (cursorY > cardHeight/2) {  //Если я в верхней половине карточки
         this.insertAdjacentElement('afterend', draggableCard) //То добавляю новую карточку после той, на которую навжоу
     }else{ //если в нижней половине карточки
         this.insertAdjacentElement('beforebegin', draggableCard) //добавляю новую перед наведенной
     }
+
 
 }
 
@@ -885,16 +998,25 @@ function dragEnd() {                 // Когда мы отпустили кн�
 
 }
 
-
 // Получение данных при загрузке страницы
 
 let onLoad = () => { 
+
+    if (localStorage.getItem("userArr") != null) {
+        userArr = JSON.parse(localStorage.getItem('userArr'))
+        userId = JSON.parse(localStorage.getItem('userId'))
+        updateUserIcon();
+    }else{
+        addUser();
+        addUser();
+    }
 
     //получаем название доски
 
     if (localStorage.getItem("name") != null) {
         nameOfPlace = localStorage.getItem("name");
-        placeForName.value = nameOfPlace.replace(/"/g,"")
+        nameOfPlace = nameOfPlace.replace(/"/g,"");
+        placeForName.value = nameOfPlace
     }
     
     //получаем логи
