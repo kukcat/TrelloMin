@@ -25,6 +25,7 @@ let isError = false;     // Есть ли сейчас выведенная ош
 let nameOfPlace = 'Название рабочей зоны';  //Название рабочей зоны
 let background;          // Картинка для фона (не работает при записи в локальное хранилище)
 let draggableCard;       // Карточка, которую я таскаю drag&drop'ом
+let currentDate;         //Текущая дата для input
 
 placeForName.addEventListener('change', () => changeNameOfPlace())
 filterBtn.addEventListener('click', () => addFilterItemModal())
@@ -73,7 +74,7 @@ let createBoardItem = (boardId) =>{  //создание карточки. У м�
     
     let itemInfo = document.forms.createBoardItem.elements;   //получение массива инпутов из формы 
     let itemTag = [];   //массив для выбранных тегов для карточки
-
+    let userId;
     if (itemInfo.title.value.length == 0 || itemInfo.title.value.length > 20) {
         addError('Название задачи должно содержать от 1 до 20 символов!')
         return 
@@ -102,8 +103,17 @@ let createBoardItem = (boardId) =>{  //создание карточки. У м�
         }
     });
     
+    for(let i = 0; i < userArr.length; i++){
+        if(itemInfo.user[i].checked) userId = itemInfo.user[i].value;
+    }
+
+    if(userId == undefined) {
+        addError('Выберите ответственного за задачу')
+        return
+    }
     
-    
+
+
     const boardItem = {
         'boardId':  boardId,                        //привязка к борде
         'position': boardArr[getBoardIndex(boardId)].cardCounter,      //позиция в борде
@@ -111,7 +121,8 @@ let createBoardItem = (boardId) =>{  //создание карточки. У м�
         'title': itemInfo.title.value,                                                                          //данные карточки.
         'text': itemInfo.text.value,
         'expiredDate': itemInfo.expiredDate.value,
-        'tag': itemTag   //массив айдишек тегов
+        'tag': itemTag,   //массив айдишек тегов
+        'userId': userId
     }
     addBoardItem(boardItem);   //рисуем карточку
     boardItemArr.push(boardItem);      //пушим в массив
@@ -172,6 +183,7 @@ async function addUser(){
     exitModal()
     updateUserIcon()
     addToLocalStorage('user');
+    addLog(`Добавлен новый пользователь: ${user.name}`)
 
 }
 
@@ -238,12 +250,25 @@ let addBoardItemModal = (boardId) =>{   //создание модалки для
         `
     }
 
+    modalValue += `</div> <div class="user_wrapper_add">`
+
+    for (let i = 0; i < userArr.length; i++) {
+        modalValue += `
+            <div class="user_item">
+                <input type="radio" name="user" id="user${i}" class="user_input_add" value="${userArr[i].id}">          
+                <label class="user_label_add" for="user${i}">
+                    <img src="${userArr[i].icon}">
+                </label>
+            </div>
+        `
+    }
+
     
     modalValue += `
             </div>
             <label for="">Дата окончания</label>
             <input type="date" id="expiredDate" name="trip-start"
-            value="2022-01-10">
+            value="${currentDate}" min="${currentDate}">
             <div class="btn_item_wrapper">
                 <div class="add_item_btn">Добавить карточку</div>
                 <div class="cancel_item_btn">Выйти</div>
@@ -252,10 +277,11 @@ let addBoardItemModal = (boardId) =>{   //создание модалки для
         </form>`
     
     modalWindow.innerHTML = modalValue;
+
     
-    modalWindow.childNodes[1].childNodes[1].childNodes[19].childNodes[1].addEventListener('click', () => createBoardItem(boardId));     //добавление элемента в массив
+    modalWindow.childNodes[1].childNodes[1].childNodes[21].childNodes[1].addEventListener('click', () => createBoardItem(boardId));     //добавление элемента в массив
     
-    modalWindow.childNodes[1].childNodes[1].childNodes[19].childNodes[3].addEventListener('click', () => exitModal())           //закрыть модалку
+    modalWindow.childNodes[1].childNodes[1].childNodes[21].childNodes[3].addEventListener('click', () => exitModal())           //закрыть модалку
 
 }
 
@@ -296,7 +322,7 @@ let changeBoardItemModal = (boardItemId) =>{       //модалка для из�
         <div class="window">
             <input name="newTitle" type="text" value="${boardItemArr[index].title}" class="modal_title_edit">
             <textarea name="newText" class="modal_text_edit">${boardItemArr[index].text}</textarea>
-            <input name="newDate" type="date" value="${boardItemArr[index].expiredDate}" class="modal_date_edit">
+            <input name="newDate" type="date" min="${currentDate}" value="${boardItemArr[index].expiredDate}" class="modal_date_edit">
             <label class="tag_label_edit" for="">Тег: </label>
             <div class="tag_wrapper">
         `
@@ -320,6 +346,31 @@ let changeBoardItemModal = (boardItemId) =>{       //модалка для из�
             `
             
         }
+        
+        modalValue += `</div>
+        <label class="tag_label_edit" for="">Ответственный за задание: </label>
+        <div class="user_wrapper_add">`
+
+        for (let i = 0; i < userArr.length; i++) {
+
+            let checked 
+
+            if (getUserIndex(boardItemArr[index].userId) == i){
+                checked = 'checked'                                                                                          // тега в массиве тегов, то в переменную записывается слово checked 
+            }else{
+                checked = ''                                                                                                 
+            }
+
+            modalValue += `
+                <div class="user_item">
+                    <input type="radio" name="user" id="user${i}" class="user_input_add" value="${userArr[i].id}" ${checked}>          
+                    <label class="user_label_add" for="user${i}">
+                        <img src="${userArr[i].icon}">
+                    </label>
+                </div>
+            `
+        }
+
     
        modalValue+= `</div>
             <div class="btn_wrapper_edit">
@@ -333,10 +384,11 @@ let changeBoardItemModal = (boardItemId) =>{       //модалка для из�
     `
     modalWindow.insertAdjacentHTML('afterbegin', modalValue)
 
+   
     
-    modalWindow.childNodes[1].childNodes[1].childNodes[11].childNodes[1].addEventListener('click', () => changeBoardItem(index)) //изменить
-    modalWindow.childNodes[1].childNodes[1].childNodes[11].childNodes[3].addEventListener('click', () => exitModal()) //выйти
-    modalWindow.childNodes[1].childNodes[1].childNodes[13].addEventListener('click', () => deleteBoardItem(index)) //удалить
+    modalWindow.childNodes[1].childNodes[1].childNodes[15].childNodes[1].addEventListener('click', () => changeBoardItem(index)) //изменить
+    modalWindow.childNodes[1].childNodes[1].childNodes[15].childNodes[3].addEventListener('click', () => exitModal()) //выйти
+    modalWindow.childNodes[1].childNodes[1].childNodes[17].addEventListener('click', () => deleteBoardItem(index)) //удалить
 }
 
 let addBoardItem = (element) =>{        //отображение карточки в борде 
@@ -345,13 +397,24 @@ let addBoardItem = (element) =>{        //отображение карточк�
     boardItem.classList.add('card_body_item');
     boardItem.setAttribute('item-index-number', element.itemId)
     boardItem.setAttribute('draggable', 'true')
+    let content= '';
 
-    let content;
-    
-    content= `<div class="card_header_item">
-                    <div class="card_title_item">${element.title}</div>
-                    <div class="card_tag_item">
-                    <div class="tag_section">`
+    if (userArr[getUserIndex(element.userId)]) {  //Если такой юзер есть - выводим его
+        content = `
+        <div class="left"><img class="card_img" src="${userArr[getUserIndex(element.userId)].icon}" draggable="false"></div> 
+        `
+    }else{ // если нет - выводим самого первого юзера. Можно не выводить ничего, если убрать else. Просто не придумал лучшего поведения при отсутствии этого юзера в борде
+        content = `
+        <div class="left"><img class="card_img" src="${userArr[0].icon}" draggable="false"></div>
+        `
+    }
+
+    content+= `
+        <div class="right">
+        <div class="card_header_item">
+            <div class="card_title_item">${element.title}</div>
+            <div class="card_tag_item">
+            <div class="tag_section">`
  
 
     for (let i = 0; i < element.tag.length; i++) {
@@ -364,7 +427,7 @@ let addBoardItem = (element) =>{        //отображение карточк�
    
 
     content += `</div></div></div>
-            <div class="card_date_item">Выполнить до: ${element.expiredDate}</div>`
+            <div class="card_date_item">Выполнить до: ${element.expiredDate}</div></div>`
 
     boardItem.insertAdjacentHTML('beforeend',content)
 
@@ -585,6 +648,37 @@ let getTagIndex = (colorId) => {
     }
 }
 
+let getUserIndex = (userId) => {
+    for (let i = 0; i < userArr.length; i++) {
+        if(userArr[i].id == userId)
+        return i;
+    }
+}
+
+let getCurrentDate = () => {
+    let today = new Date();
+    let year = today.getFullYear();
+    let month;
+    let date;
+
+
+    if (today.getMonth()+1 < 10) {
+        month = `` + today.getMonth()+1
+    }else{
+        month = today.getMonth()+1;
+    }
+
+    if (today.getDate() < 10) {
+        date = `0`+ today.getDate()
+    }else{
+        date = today.getDate();
+    }
+
+    return year +`-`+ month +`-`+ date
+    
+}
+
+
 let changeBoardItem = (index) =>{              //изменение карточки. В целом, принцип такой же, как и при создании
 
     let itemInfo = document.forms.changeBoardItemForm.elements
@@ -618,11 +712,17 @@ let changeBoardItem = (index) =>{              //изменение карточ
         }
     });
     
+    if (!itemInfo.user.value) {
+        addError('Укажите ответственного за задание!')
+        return
+    }
+   
 
     boardItemArr[index].text = itemInfo.newText.value
     boardItemArr[index].expiredDate = itemInfo.newDate.value
     boardItemArr[index].title = itemInfo.newTitle.value
     boardItemArr[index].tag = itemTag
+    boardItemArr[index].userId = itemInfo.user.value
 
     boardReCreate();
     addToLocalStorage('item');
@@ -708,6 +808,28 @@ let deleteTag = () =>{          //удаление тега
 
 }
 
+let deleteUser = () => {
+    if(userArr.length <= 1){
+        addError('Минимальное кол-во юзеров: 1');
+        return
+    }
+
+    allUser = document.querySelectorAll('.user_input')
+
+    for(let i = 0; i <allUser.length; i++){
+        if(allUser[i].checked){
+            addLog(`Удален юзер ${userArr[i].userName}`)
+            userArr.splice(i,1);
+            break
+        }
+    }
+ 
+    addToLocalStorage('user');
+    exitModal()
+    boardReCreate()
+
+}
+
 
 let changeBoardName = (element) =>{ //изменение названия борды
     
@@ -766,6 +888,7 @@ let exitModal = () =>{ //закрытие модалки
 
 let changeNameOfPlace = () => { //изменение названия борды
     nameOfPlace = placeForName.value;
+    addLog(`Изменено название пространства на ${nameOfPlace}`)
     addToLocalStorage('name');
 }
 
@@ -778,6 +901,8 @@ let reset = () =>{ //сборс всего
     localStorage.removeItem('boardId');
     localStorage.removeItem('itemId');
     localStorage.removeItem('name');
+    localStorage.removeItem('userArr');
+    localStorage.removeItem('userId');
     location.reload() //автоматическая перезагрузка страницы 
 }
 
@@ -1009,6 +1134,9 @@ let onLoad = () => {
     }else{
         addUser();
         addUser();
+        addUser();
+        addUser();
+        addUser();
     }
 
     //получаем название доски
@@ -1059,6 +1187,8 @@ let onLoad = () => {
         createBoard(boardId, "Done", "#cccccc")
     }
     
+    currentDate = getCurrentDate();
+
 }
 
 
