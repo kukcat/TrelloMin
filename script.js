@@ -1,12 +1,13 @@
 //==================== vars and events 
 
 let addButton = document.querySelector(".add_btn")
-let boardPlacement = document.querySelector(".board_wrapper")
+let mainInner = document.querySelector(".main_inner")
 let placeForName = document.querySelector('#work_name') 
 let resetBtn = document.querySelector(".reset_btn");
 let settingsBtn = document.querySelector('.settings_btn')
 let filterBtn = document.querySelector('.filter_btn');
 let userBtn = document.querySelector('.user_icon_wrapper')
+let workTypeSelect = document.querySelector('#work_type');
 
 let USER_URL = 'https://randomuser.me/api/?results=1'
 
@@ -33,6 +34,7 @@ resetBtn.addEventListener('click', () => reset())
 addButton.addEventListener('click', () => addModalBoard())
 settingsBtn.addEventListener('click', () => addModalSettings())
 userBtn.addEventListener('click', () => addModalUser())
+workTypeSelect.addEventListener('change', () => changeWorkType())
 
 //=============================== creating
 
@@ -206,7 +208,7 @@ let addBoard = (element) =>{ // добавление борды
     let board = document.createElement('li');                           //принцип везде одинаковый. Создаю какой-то элемент
     board.classList.add('board');                                       // Даю ему класс
     board.setAttribute('board-index-number', element.id);               //Даю атрибут, если нужно
-    boardPlacement.append(board);
+    document.querySelector('.board_wrapper').append(board)
     board.style.backgroundColor = element.color + "B3";             //задаю цвет борды
     board.innerHTML=`
         <div class="board_header">
@@ -455,6 +457,65 @@ let addBoardItem = (element) =>{        //отображение карточк�
     addDragAndDropEventBoardItem(boardItem)
 }
 
+let addCalendar = (month, year) =>{
+    mainInner.innerHTML = ''
+    let date = new Date(year, month);
+    let calendar = document.createElement('div');
+    calendar.classList.add('calendar');
+    
+    let dateArr = [];
+
+    for(let item of boardItemArr){
+        let splitted = item.expiredDate.split('-')
+
+        if (+splitted[1] != month+1 || +splitted[0] != year) continue
+
+        dateArr.push(item)
+
+    }
+
+    console.log(dateArr)
+    let calendarValue = `<div class="row"><div class="cell day_cell">Понедельник</div>
+    <div class="cell day_cell">Вторник</div><div class="cell day_cell">Среда</div>
+    <div class="cell day_cell"> Четверг</div><div class="cell day_cell">Пятница</div>
+    <div class="cell day_cell">Суббота</div><div class="cell day_cell">Воскресенье</div></div><div class="row">`
+
+    for(let i = 1; i < date.getDay(); i++){
+        calendarValue+= `<div class="cell"></div>`
+    }
+
+    while(date.getMonth() == month){
+        calendarValue += `<div class="cell">
+                            <div class="date">${date.getDate()}</div>
+                            <div class="card_wrapper">`
+                            
+                          
+   
+
+    calendarValue+=`</div></div>`
+
+    
+    if(date.getDay() % 7 == 0){
+        calendarValue+= `</div><div class="row">`
+    }
+
+    date.setDate(date.getDate()+1)
+    }
+
+    if (date.getDay() != 0) {
+        for (let i = date.getDay(); i <= 7; i++) {
+            calendarValue+= `<div class="cell"></div>`
+        }
+    }
+
+      calendarValue+= `</div></div>`
+
+    calendar.insertAdjacentHTML('afterbegin', calendarValue)
+    mainInner.append(calendar)
+
+
+}
+
 let addModalUser = () => {
 
     let modalWindow = document.createElement('div');
@@ -632,6 +693,15 @@ let updateUserIcon = () =>{
 
     wrapper.insertAdjacentHTML('beforeend', users)
 
+}
+
+let changeWorkType = () =>{
+    let workType = document.querySelector('#work_type').value
+    if (workType == 'board') {
+        reCreate()
+    } else if (workType == 'calendar'){
+        createCalendar()
+    }
 }
 
 //=======================================
@@ -918,7 +988,11 @@ let reset = () =>{ //сборс всего
 }
 
 let reCreate = () =>{ //пересоздание борд
-    boardPlacement.innerHTML = ''
+    
+    let boardPlacement = document.createElement('div')
+    boardPlacement.classList.add('board_wrapper');
+    mainInner.innerHTML = ''
+    mainInner.append(boardPlacement)
     boardArr.forEach(element => {
         addBoard(element);
     });
@@ -952,6 +1026,12 @@ let boardReCreate = () =>{ //пересоздание карточек в бор
     
         }); 
     }
+
+}
+
+let createCalendar = () => {
+
+    addCalendar(0,2022)
 
 }
 
