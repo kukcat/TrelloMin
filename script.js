@@ -1,6 +1,6 @@
 //==================== vars and events 
 
-let addButton = document.querySelector(".add_btn")
+let addBtn= document.querySelector(".add_btn")
 let mainInner = document.querySelector(".main_inner")
 let placeForName = document.querySelector('#work_name') 
 let resetBtn = document.querySelector(".reset_btn");
@@ -9,7 +9,7 @@ let filterBtn = document.querySelector('.filter_btn');
 let userBtn = document.querySelector('.user_icon_wrapper')
 let workTypeSelect = document.querySelector('#work_type');
 
-let USER_URL = 'https://randomuser.me/api/?results=1'
+let USER_URL = 'https://randomuser.me/api/?results='
 
 let boardArr = []        // Массив с бордами 
 let boardItemArr = []    // Массив с карточками
@@ -23,18 +23,33 @@ let itemId = 0;          // Последняя айдишка карточке  
 let boardId = 0;         // Последняя айдишка борды                 то больше элемента с такой айдишкой не будет. Насколько я помню, такая система в бд, так что я решил why not
 let isfilter = false;    // Стоит ли сейчас фильтр
 let isError = false;     // Есть ли сейчас выведенная ошибка 
-let nameOfPlace = 'Название рабочей зоны';  //Название рабочей зоны
-let background;          // Картинка для фона (не работает при записи в локальное хранилище)
+let nameOfPlace = 'Название рабочей зоны';  //Название рабочей зоны      
 let draggableCard;       // Карточка, которую я таскаю drag&drop'ом
 let currentDate;         //Текущая дата для input
+
+let monthName= [         //название месяцов для календаря
+    'Январь',
+    'Февраль',
+    'Март',
+    'Апрель',
+    'Май',
+    'Июнь',
+    'Июль',
+    'Август',
+    'Сентябрь',
+    'Октябрь',
+    'Ноябрь',
+    'Декабрь',
+];
+    
 
 placeForName.addEventListener('change', () => changeNameOfPlace())
 filterBtn.addEventListener('click', () => addFilterItemModal())
 resetBtn.addEventListener('click', () => reset())
-addButton.addEventListener('click', () => addModalBoard())
+addBtn.addEventListener('click', () => addModalBoard())
 settingsBtn.addEventListener('click', () => addModalSettings())
 userBtn.addEventListener('click', () => addModalUser())
-workTypeSelect.addEventListener('change', () => changeWorkType())
+workTypeSelect.addEventListener('change', () => reCreateCurrenWorkType())
 
 //=============================== creating
 
@@ -176,27 +191,30 @@ let addNewTag = (newColor = document.querySelector('.input_board_color').value) 
     addToLocalStorage('color')
 }
 
-async function addUser(){
+async function addUser(count){ //добавление нового пользователя
 
-    let response = await fetch(USER_URL);
-    let userInfo = await response.json();
+    let response = await fetch(USER_URL+count); //отправляем запрос по ссылке (задали в начале) и получаем результат в кол-ве count
+    let userInfo = await response.json(); 
 
-    let userName = userInfo.results[0].name.first +` `+ userInfo.results[0].name.last
+    for(let i = 0; i<count; i++){
+        let userName = userInfo.results[i].name.first +` `+ userInfo.results[i].name.last
 
-    const user = {
-        'id': userId,
-        'gender': userInfo.results[0].gender,
-        'name': userName,
-        'icon': userInfo.results[0].picture.thumbnail
+        const user = {
+            'id': userId,
+            'gender': userInfo.results[i].gender,
+            'name': userName,
+            'icon': userInfo.results[i].picture.thumbnail
+        }
+
+        userArr.push(user);
+        userId++;
+        addLog(`Добавлен новый пользователь: ${user.name}`)
     }
-
-    userArr.push(user);
-    userId++;
 
     exitModal()
     updateUserIcon()
     addToLocalStorage('user');
-    addLog(`Добавлен новый пользователь: ${user.name}`)
+    
 
 }
 
@@ -457,66 +475,122 @@ let addBoardItem = (element) =>{        //отображение карточк�
     addDragAndDropEventBoardItem(boardItem)
 }
 
-let addCalendar = (month, year) =>{
+let addCalendar = (month, year) =>{ //создание календаря
     mainInner.innerHTML = ''
-    let date = new Date(year, month);
+    let date = new Date(year, month);  //создаем переменную с нужным нам месяцем
+
+    month = date.getMonth(); //обновляем данные при необходимости (если меняем месяцы календаря)
+    year = date.getFullYear();
+
     let calendar = document.createElement('div');
     calendar.classList.add('calendar');
+    mainInner.insertAdjacentHTML('afterbegin', `<div class="calendar_month"><div class="previous_month">< Предыдущий месяц</div>
+    <div class="calendar_date">${monthName[date.getMonth()]} ${date.getFullYear()}</div>
+    <div class="next_month">Следующий месяц ></div></div>
+    `)
     
-    let dateArr = [];
+    let dateArr = []; //массив для карточек этого месяца
 
-    for(let item of boardItemArr){
-        let splitted = item.expiredDate.split('-')
+    for(let item of boardItemArr){ //проходимся по массиву карточек
+        let splittedDate = item.expiredDate.split('-') 
+        if (+splittedDate[1] != month+1 || +splittedDate[0] != year) continue //если месяц и год даты окончания карточек не совпадают с нужными нам, то пропускаем эту карточку
 
-        if (+splitted[1] != month+1 || +splitted[0] != year) continue
-
-        dateArr.push(item)
-
+        const calendarItem = { //иначе создаем объект с нужными нам данными для календаря
+            'expiredDate': splittedDate[2],
+            'id': item.itemId,
+            'title': item.title,
+            'tag': item.tag
+        }
+       
+        dateArr.push(calendarItem)
     }
+   
 
-    console.log(dateArr)
-    let calendarValue = `<div class="row"><div class="cell day_cell">Понедельник</div>
+    dateArr.sort((a, b) => a.expiredDate < b.expiredDate ? 1 : -1) // сортируем массив с конца дат
+
+
+    //создаем верхнюю строчку календаря
+    let calendarValue = `<div class="row"><div class="cell day_cell">Понедельник</div> 
     <div class="cell day_cell">Вторник</div><div class="cell day_cell">Среда</div>
     <div class="cell day_cell"> Четверг</div><div class="cell day_cell">Пятница</div>
     <div class="cell day_cell">Суббота</div><div class="cell day_cell">Воскресенье</div></div><div class="row">`
 
-    for(let i = 1; i < date.getDay(); i++){
-        calendarValue+= `<div class="cell"></div>`
-    }
 
-    while(date.getMonth() == month){
-        calendarValue += `<div class="cell">
-                            <div class="date">${date.getDate()}</div>
-                            <div class="card_wrapper">`
-                            
-                          
-   
 
-    calendarValue+=`</div></div>`
-
-    
-    if(date.getDay() % 7 == 0){
-        calendarValue+= `</div><div class="row">`
-    }
-
-    date.setDate(date.getDate()+1)
-    }
-
-    if (date.getDay() != 0) {
-        for (let i = date.getDay(); i <= 7; i++) {
+    if (date.getDay() == 0) { //если воскресенье - добавляем шесть ячеек 
+        calendarValue+= `<div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>`
+    }else{//иначе добавляем кол-во ячеек равное текущий текущему дню недели-1 (Так как воскресенье - 0, то нельзя создать -1 ячейку. Поэтому нужен этот if)
+        for(let i = 1; i < date.getDay(); i++){
             calendarValue+= `<div class="cell"></div>`
         }
     }
 
-      calendarValue+= `</div></div>`
+   
 
+    while(date.getMonth() == month){ //Пока месяц не закончился создаем ячейки 
+        calendarValue += `<div class="cell"> 
+                            <div class="date">${date.getDate()}</div>
+                            <ul class="card_wrapper">`
+           
+    
+   
+        
+        while(dateArr.length != 0 && dateArr[dateArr.length-1].expiredDate == date.getDate()){ //пока текущая дата равна дате последнего элемента нашей карточки, то добавляем элементы в календарь
+
+            calendarValue +=`
+                <li class="calendar_card_item" item-index-number="${dateArr[dateArr.length-1].id}">  
+                    <div class="calendar_card_item_text"> ${dateArr[dateArr.length-1].title} </div><div class="calendar_card_item_tag_wrapper">`
+                    
+            for(let i = 0; i< dateArr[dateArr.length-1].tag.length; i++){
+                if (colorArr[getTagIndex(dateArr[dateArr.length-1].tag[i])]) {
+                    calendarValue+= `<div class="card_tag" style="background-color: ${colorArr[getTagIndex(dateArr[dateArr.length-1].tag[i])].tagColor}"></div>`
+                }
+            }
+
+            calendarValue+= `</div></li>`
+            
+            dateArr.pop(); //после добавления карточки, удаляем последний элемент массива (Решил пойти отсортировать так, потому что pop быстрее работает, чем shift)
+        
+        }
+
+
+
+    calendarValue+=`</ul></div>` //закрываем карточку
+
+    
+    if(date.getDay() == 0){  //если воскресенье - переходим на новую строку
+        calendarValue+= `</div><div class="row">`
+    }
+
+    date.setDate(date.getDate()+1) //устанавливаем следующий день в переменной
+
+    }
+
+    if (date.getDay() != 0) { //после окончания месяца дополняем календарь пустыми ячейками
+        for (let i = date.getDay(); i <= 7; i++) {
+            calendarValue+= `<div class="cell"></div>`
+        }
+    } else{
+        calendarValue+= `<div class="cell"></div>`
+    }
+
+      calendarValue+= `</div></div>` //закрываем календарь
+
+      
     calendar.insertAdjacentHTML('afterbegin', calendarValue)
     mainInner.append(calendar)
 
+    allCards = document.querySelectorAll('.calendar_card_item')
 
+    allCards.forEach(card => { //добавляем каждой карточек в календаре возможность изменяться по нажатию
+        card.addEventListener('click', () => changeBoardItemModal(card.getAttribute('item-index-number')))
+    });
+
+    mainInner.childNodes[0].childNodes[0].addEventListener('click', () => addCalendar(month-1, year)) //при нажатии на "Предыдущий месяц", запускаем эту же функцию со сдвигом в один месяц назад
+    mainInner.childNodes[0].childNodes[4].addEventListener('click', () => addCalendar(month+1, year)) //то же самое с "Следующий месяц"
 }
 
-let addModalUser = () => {
+let addModalUser = () => { //модалка для добавления нового юзера
 
     let modalWindow = document.createElement('div');
     modalWindow.classList.add('modal_window');
@@ -549,7 +623,7 @@ let addModalUser = () => {
     modalWindow.insertAdjacentHTML('afterbegin', modalValue);
     
     modalWindow.childNodes[1].childNodes[5].addEventListener('click', ()=>deleteUser())
-    modalWindow.childNodes[1].childNodes[7].childNodes[1].addEventListener('click', ()=>addUser())
+    modalWindow.childNodes[1].childNodes[7].childNodes[1].addEventListener('click', ()=>addUser(1))
     modalWindow.childNodes[1].childNodes[7].childNodes[3].addEventListener('click', ()=>exitModal())
 
 }
@@ -695,12 +769,21 @@ let updateUserIcon = () =>{
 
 }
 
-let changeWorkType = () =>{
+let reCreateCurrenWorkType = () =>{
     let workType = document.querySelector('#work_type').value
     if (workType == 'board') {
         reCreate()
+        filterBtn.removeAttribute('disabled')
+        addBtn.removeAttribute('disabled')
+
     } else if (workType == 'calendar'){
-        createCalendar()
+        filterBtn.setAttribute('disabled',true)
+        addBtn.setAttribute('disabled',true)
+        
+
+        let currentMonth = currentDate.split("-")[1]-1
+        let currentYear = currentDate.split("-")[0]
+        addCalendar(currentMonth,currentYear)
     }
 }
 
@@ -805,7 +888,7 @@ let changeBoardItem = (index) =>{              //изменение карточ
     boardItemArr[index].tag = itemTag
     boardItemArr[index].userId = itemInfo.user.value
 
-    boardReCreate();
+    reCreateCurrenWorkType()
     addToLocalStorage('item');
     addLog(`Изменена карточка ${boardItemArr[index].text}`)
     exitModal();
@@ -849,22 +932,29 @@ let FilterItem = () =>{   //фильтрация карточек
 
 }
 
-let changeBackground = () =>{       //измнение фона. попытался сделать измнение картинки, а не просто цвета, потому что не понял, что там именно в задании
+let changeBackground = () =>{       //измнение фона. 
     
-    if (!document.querySelector('.input_background').files[0]) {   // если инпут пустой, то выходим из функции
+    let file = document.querySelector('.input_background').files[0] //получение файла
+
+    if(!file){ // если инпут пустой, то выходим из функции
+        addError('Выберите изображение')
+        return
+    }else if (file.type == 'image/jpeg' || file.type == 'image/jpg' || file.type == 'image/png') {   // если тип файла jpg/jpeg/png 
+        let reader = new FileReader();
+        reader.readAsDataURL(file);  //начинаем чтение файла, при завершении получаем его в виде URL строки 
+        reader.addEventListener("load", function () {  //при завершении чтения
+            document.querySelector('body').style.background = `url(${reader.result})`; //задаем нашему body background с URL, который мы получили 
+            document.querySelector('body').style.backgroundSize = 'cover';
+            localStorage.setItem("background", reader.result); //и сохраняем эту строку в локальное хранилище
+        }, false);
+        exitModal()
+
+    }else{ //если выбрали не один из предыдущих типов, то выходим из функции
         addError('Выберите изображение')
         return
     }
+
     
-    let reader = new FileReader();
-    reader.readAsDataURL(document.querySelector('.input_background').files[0]);
-    reader.addEventListener("load", function () {
-        document.querySelector('body').style.background = `url(${reader.result})`;
-        document.querySelector('body').style.backgroundSize = 'cover';
-    }, false);
-    
-   exitModal()
-   
 }
     
 let deleteTag = () =>{          //удаление тега
@@ -885,11 +975,11 @@ let deleteTag = () =>{          //удаление тега
     
     addToLocalStorage('color')
     exitModal()
-    boardReCreate()
+    reCreateCurrenWorkType()
 
 }
 
-let deleteUser = () => {
+let deleteUser = () => { //удаление юзеров 
     if(userArr.length <= 1){
         addError('Минимальное кол-во юзеров: 1');
         return
@@ -904,7 +994,8 @@ let deleteUser = () => {
             break
         }
     }
- 
+
+    updateUserIcon()
     addToLocalStorage('user');
     exitModal()
     boardReCreate()
@@ -984,6 +1075,7 @@ let reset = () =>{ //сборс всего
     localStorage.removeItem('name');
     localStorage.removeItem('userArr');
     localStorage.removeItem('userId');
+    localStorage.removeItem('background');
     location.reload() //автоматическая перезагрузка страницы 
 }
 
@@ -1029,11 +1121,6 @@ let boardReCreate = () =>{ //пересоздание карточек в бор
 
 }
 
-let createCalendar = () => {
-
-    addCalendar(0,2022)
-
-}
 
 let addLog = (text) => { //добавление логов
 
@@ -1218,16 +1305,23 @@ function dragEnd() {                 // Когда мы отпустили кн�
 
 let onLoad = () => { 
 
+
+    //получаем данные про юзеров
     if (localStorage.getItem("userArr") != null) {
         userArr = JSON.parse(localStorage.getItem('userArr'))
         userId = JSON.parse(localStorage.getItem('userId'))
         updateUserIcon();
     }else{
-        addUser();
-        addUser();
-        addUser();
-        addUser();
-        addUser();
+        addUser(5);
+    
+    }
+
+
+    //получаем URL фона
+
+    if(localStorage.getItem('background') != null){
+        document.querySelector('body').style.background = `url(${localStorage.getItem('background')})`;
+        document.querySelector('body').style.backgroundSize = 'cover';
     }
 
     //получаем название доски
