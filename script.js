@@ -25,7 +25,7 @@ let isfilter = false;    // Стоит ли сейчас фильтр
 let isError = false;     // Есть ли сейчас выведенная ошибка 
 let nameOfPlace = 'Название рабочей зоны';  //Название рабочей зоны      
 let draggableCard;       // Карточка, которую я таскаю drag&drop'ом
-let currentDate;         //Текущая дата для input
+let currentDate;         // Текущая дата для input
 
 let monthName= [         //название месяцов для календаря
     'Январь',
@@ -783,6 +783,7 @@ let reCreateCurrenWorkType = () =>{
 
         let currentMonth = currentDate.split("-")[1]-1
         let currentYear = currentDate.split("-")[0]
+        console.log(currentDate)
         addCalendar(currentMonth,currentYear)
     }
 }
@@ -825,18 +826,20 @@ let getCurrentDate = () => {
     let month;
     let date;
 
-
+    
     if (today.getMonth()+1 < 10) {
-        month = `` + today.getMonth()+1
+        month = `0` + (today.getMonth()+1)
     }else{
         month = today.getMonth()+1;
     }
 
     if (today.getDate() < 10) {
-        date = `0`+ today.getDate()
+        date = `0`+ (today.getDate()+1)
     }else{
         date = today.getDate();
     }
+
+    console.log(month)
 
     return year +`-`+ month +`-`+ date
     
